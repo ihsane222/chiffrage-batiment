@@ -1190,6 +1190,16 @@ function renderParams(el) {
         </div>
       </div>
     </div>
+    <div class="section">
+      <div class="section-title">Assistant IA (Groq)</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Clé API Groq</label>
+          <input type="password" value="${esc(state.params.groq_key)}" onchange="state.params.groq_key=this.value;saveState()" placeholder="gsk_...">
+          <span class="hint">Gratuit sur console.groq.com — stockée localement dans votre navigateur uniquement</span>
+        </div>
+      </div>
+    </div>
   `;
 }
 
