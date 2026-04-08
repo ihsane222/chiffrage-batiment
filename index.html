@@ -1,0 +1,1877 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chiffrage Bâtiment — Prix de revient / Prix de vente</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+:root {
+  --primary: #1a365d;
+  --primary-light: #2b6cb0;
+  --primary-lighter: #ebf4ff;
+  --accent: #e53e3e;
+  --success: #38a169;
+  --warning: #d69e2e;
+  --bg: #ffffff;
+  --bg-alt: #f7fafc;
+  --bg-sidebar: #1a365d;
+  --text: #1a202c;
+  --text-light: #718096;
+  --text-sidebar: #e2e8f0;
+  --border: #e2e8f0;
+  --border-light: #edf2f7;
+  --shadow: 0 1px 3px rgba(0,0,0,0.1);
+  --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
+  --radius: 6px;
+  --font: 'Inter', -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a202c;
+    --bg-alt: #2d3748;
+    --bg-sidebar: #0d1b2a;
+    --text: #e2e8f0;
+    --text-light: #a0aec0;
+    --border: #4a5568;
+    --border-light: #2d3748;
+    --primary-lighter: #1a365d;
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+/* Sidebar */
+.sidebar {
+  width: 240px;
+  min-width: 240px;
+  background: var(--bg-sidebar);
+  color: var(--text-sidebar);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow-y: auto;
+}
+.sidebar-header {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.sidebar-header h1 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+}
+.sidebar-header p {
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+  margin-top: 4px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-sidebar);
+  border-left: 3px solid transparent;
+  transition: all 0.15s;
+}
+.nav-item:hover { background: rgba(255,255,255,0.05); }
+.nav-item.active {
+  background: rgba(255,255,255,0.1);
+  border-left-color: #63b3ed;
+  color: #fff;
+}
+.nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+.nav-item .nav-badge {
+  margin-left: auto;
+  background: rgba(255,255,255,0.15);
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+.sidebar-footer {
+  margin-top: auto;
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sidebar-footer button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.08);
+  border: none;
+  color: var(--text-sidebar);
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: var(--font);
+  transition: background 0.15s;
+}
+.sidebar-footer button:hover { background: rgba(255,255,255,0.15); }
+
+/* Main */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.main-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.main-header h2 { font-size: 18px; font-weight: 600; }
+.main-header .actions { display: flex; gap: 8px; }
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--font);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn:hover { background: var(--bg-alt); }
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+.btn-primary:hover { background: var(--primary-light); }
+.btn-success { background: var(--success); color: #fff; border-color: var(--success); }
+.btn-danger { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+
+/* Tables */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.data-table th {
+  background: var(--bg-alt);
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-light);
+  border-bottom: 2px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.data-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-light);
+  vertical-align: middle;
+}
+.data-table tr:hover td { background: var(--primary-lighter); }
+.data-table .mono {
+  font-family: var(--mono);
+  font-size: 12px;
+  text-align: right;
+}
+.data-table .computed {
+  font-family: var(--mono);
+  font-size: 12px;
+  text-align: right;
+  color: var(--primary-light);
+  font-weight: 500;
+}
+.data-table input, .data-table select {
+  width: 100%;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 4px 6px;
+  font-family: var(--font);
+  font-size: 13px;
+  color: var(--text);
+  border-radius: 3px;
+}
+.data-table input:focus, .data-table select:focus {
+  border-color: var(--primary-light);
+  outline: none;
+  background: var(--bg);
+}
+.data-table input[type="number"] {
+  font-family: var(--mono);
+  font-size: 12px;
+  text-align: right;
+  -moz-appearance: textfield;
+}
+.data-table input[type="number"]::-webkit-inner-spin-button { display: none; }
+
+/* Form groups */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.form-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.form-group input, .form-group select {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg);
+}
+.form-group input:focus, .form-group select:focus {
+  border-color: var(--primary-light);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(43,108,176,0.1);
+}
+.form-group .hint {
+  font-size: 11px;
+  color: var(--text-light);
+}
+
+/* Sub-tabs */
+.sub-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 16px;
+}
+.sub-tab {
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-light);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.15s;
+}
+.sub-tab:hover { color: var(--text); }
+.sub-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+/* Cards */
+.card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Synthèse */
+.synth-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.synth-card {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  text-align: center;
+}
+.synth-card .label { font-size: 11px; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; }
+.synth-card .value { font-size: 24px; font-weight: 700; font-family: var(--mono); margin-top: 4px; }
+.synth-card .value.pr { color: var(--primary); }
+.synth-card .value.pv { color: var(--success); }
+.synth-card .value.marge { color: var(--warning); }
+
+/* Section separator */
+.section { margin-bottom: 24px; }
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Composition poste */
+.compo-section {
+  margin: 8px 0;
+  padding: 12px;
+  background: var(--bg-alt);
+  border-radius: var(--radius);
+  border: 1px solid var(--border-light);
+}
+.compo-section h4 {
+  font-size: 12px;
+  color: var(--text-light);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Poste detail panel */
+.poste-detail {
+  position: fixed;
+  right: -500px;
+  top: 0;
+  width: 500px;
+  height: 100vh;
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  transition: right 0.3s;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.poste-detail.open { right: 0; }
+.poste-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 2;
+}
+.poste-detail-body { padding: 20px; flex: 1; }
+
+/* Groq Chat */
+.chat-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 52px;
+  height: 52px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  font-size: 22px;
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s;
+}
+.chat-fab:hover { transform: scale(1.1); }
+.chat-panel {
+  position: fixed;
+  bottom: 88px;
+  right: 24px;
+  width: 380px;
+  max-height: 500px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  z-index: 200;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+.chat-panel.open { display: flex; }
+.chat-header {
+  padding: 12px 16px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  max-height: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.chat-msg {
+  max-width: 85%;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+.chat-msg.user {
+  align-self: flex-end;
+  background: var(--primary);
+  color: #fff;
+}
+.chat-msg.assistant {
+  align-self: flex-start;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+}
+.chat-input-bar {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid var(--border);
+}
+.chat-input-bar input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 13px;
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg);
+}
+.chat-input-bar input:focus { outline: none; border-color: var(--primary-light); }
+.chat-input-bar button {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Devis print */
+.devis-preview {
+  max-width: 800px;
+  margin: 0 auto;
+  background: #fff;
+  color: #000;
+  padding: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.devis-preview .devis-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #1a365d;
+}
+.devis-preview .devis-header .left h2 { font-size: 18px; color: #1a365d; }
+.devis-preview .devis-header .right { text-align: right; font-size: 13px; color: #666; }
+.devis-preview .devis-client {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+  font-size: 13px;
+}
+.devis-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-bottom: 20px;
+}
+.devis-preview table th {
+  background: #1a365d;
+  color: #fff;
+  padding: 8px 10px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+}
+.devis-preview table td { padding: 7px 10px; border-bottom: 1px solid #e2e8f0; }
+.devis-preview table tr:nth-child(even) td { background: #f7fafc; }
+.devis-preview .devis-totaux {
+  text-align: right;
+  font-size: 14px;
+  margin-top: 16px;
+}
+.devis-preview .devis-totaux .line { display: flex; justify-content: flex-end; gap: 40px; padding: 4px 0; }
+.devis-preview .devis-totaux .line.total { font-weight: 700; font-size: 16px; border-top: 2px solid #1a365d; padding-top: 8px; }
+
+/* Info banner */
+.info-banner {
+  background: var(--primary-lighter);
+  border: 1px solid rgba(43,108,176,0.2);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-size: 12px;
+  color: var(--primary);
+  line-height: 1.5;
+}
+
+/* Delete btn in table */
+.row-delete {
+  background: none;
+  border: none;
+  color: var(--text-light);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.row-delete:hover { background: #fed7d7; color: var(--accent); }
+
+/* Editable devis fields */
+.devis-editable {
+  border: 1px dashed var(--border);
+  padding: 4px 8px;
+  border-radius: 3px;
+  min-width: 150px;
+  cursor: text;
+}
+.devis-editable:focus { outline: none; border-color: var(--primary-light); background: var(--primary-lighter); }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar { width: 60px; min-width: 60px; }
+  .sidebar-header h1, .sidebar-header p, .nav-item span:not(.nav-icon), .nav-badge { display: none; }
+  .nav-item { padding: 12px; justify-content: center; }
+  .sidebar-footer { display: none; }
+  .main-content { padding: 16px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .chat-panel { width: calc(100vw - 48px); right: 24px; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-light); }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <h1>Chiffrage Bâtiment</h1>
+    <p>Prix de revient / Prix de vente</p>
+  </div>
+  <div class="nav-item active" onclick="switchTab('params')" data-tab="params">
+    <span class="nav-icon">&#9881;</span>
+    <span>Paramètres</span>
+  </div>
+  <div class="nav-item" onclick="switchTab('bases')" data-tab="bases">
+    <span class="nav-icon">&#128451;</span>
+    <span>Bases de données</span>
+    <span class="nav-badge" id="badge-bases">0</span>
+  </div>
+  <div class="nav-item" onclick="switchTab('postes')" data-tab="postes">
+    <span class="nav-icon">&#128220;</span>
+    <span>Bibliothèque</span>
+    <span class="nav-badge" id="badge-postes">0</span>
+  </div>
+  <div class="nav-item" onclick="switchTab('metres')" data-tab="metres">
+    <span class="nav-icon">&#128207;</span>
+    <span>Métrés & Chiffrage</span>
+    <span class="nav-badge" id="badge-metres">0</span>
+  </div>
+  <div class="nav-item" onclick="switchTab('synthese')" data-tab="synthese">
+    <span class="nav-icon">&#128200;</span>
+    <span>Synthèse & Devis</span>
+  </div>
+  <div class="sidebar-footer">
+    <button onclick="exportJSON()">&#128190; Sauvegarder JSON</button>
+    <button onclick="document.getElementById('importFile').click()">&#128194; Importer JSON</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)">
+    <button onclick="exportExcel()">&#128202; Export Excel</button>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<div class="main">
+  <div class="main-header">
+    <h2 id="page-title">Paramètres généraux</h2>
+    <div class="actions" id="page-actions"></div>
+  </div>
+  <div class="main-content" id="content-area">
+    <!-- Content injected by JS -->
+  </div>
+</div>
+
+<!-- Poste Detail Panel -->
+<div class="poste-detail" id="poste-panel">
+  <div class="poste-detail-header">
+    <h3 id="poste-panel-title">Détail du poste</h3>
+    <button class="btn btn-sm" onclick="closePostePanel()">&#10005; Fermer</button>
+  </div>
+  <div class="poste-detail-body" id="poste-panel-body"></div>
+</div>
+
+<!-- Groq Chat -->
+<button class="chat-fab" onclick="toggleChat()" title="Assistant IA">&#128172;</button>
+<div class="chat-panel" id="chat-panel">
+  <div class="chat-header">
+    <span>Assistant Chiffrage</span>
+    <button style="background:none;border:none;color:#fff;cursor:pointer;font-size:18px" onclick="toggleChat()">&#10005;</button>
+  </div>
+  <div class="chat-messages" id="chat-messages">
+    <div class="chat-msg assistant">Bonjour ! Je suis votre assistant chiffrage. Posez-moi vos questions sur les prix, les compositions de postes, les taux ONSS, etc. Pour commencer, configurez votre clé API Groq dans les Paramètres.</div>
+  </div>
+  <div class="chat-input-bar">
+    <input type="text" id="chat-input" placeholder="Votre question..." onkeydown="if(event.key==='Enter')sendChat()">
+    <button onclick="sendChat()">&#10148;</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// STATE — Modèle de données complet
+// ============================================================
+const DEFAULT_STATE = {
+  params: {
+    tva_standard: 21,
+    tva_renovation: 6,
+    tva_mode: "standard",
+    charges_patronales: 25,
+    charges_salariales: 13.07,
+    autres_charges_pat: 5,
+    fg_chantier: 8,
+    fg_entreprise: 12,
+    marge_pct: 15,
+    mode_marge: "markup",
+    coeff_vente: 1.35,
+    coef_productivite: 0.85,
+    arrondi_qte: 0.01,
+    devise: "EUR",
+    groq_key: "",
+    entreprise_nom: "VOTRE ENTREPRISE",
+    entreprise_adresse: "Adresse",
+    entreprise_tva: "BE 0XXX.XXX.XXX",
+    entreprise_contact: "Tel / Email",
+  },
+  mainOeuvre: [
+    { code: "MO_MAN", profil: "Manoeuvre", ref_cp: "CP124", salaire_brut_h: 18.20, charges_patronales: 25, charges_salariales: 13.07, autres_charges_pat: 5, frais_deplacement_h: 0, coef_productivite: 0.85, notes: "" },
+    { code: "MO_Q1", profil: "Ouvrier Q1", ref_cp: "CP124", salaire_brut_h: 20.60, charges_patronales: 25, charges_salariales: 13.07, autres_charges_pat: 5, frais_deplacement_h: 0, coef_productivite: 0.85, notes: "" },
+    { code: "MO_Q2", profil: "Ouvrier Q2", ref_cp: "CP124", salaire_brut_h: 21.90, charges_patronales: 25, charges_salariales: 13.07, autres_charges_pat: 5, frais_deplacement_h: 0, coef_productivite: 0.85, notes: "" },
+    { code: "MO_CE", profil: "Chef d'équipe", ref_cp: "CP124", salaire_brut_h: 24.50, charges_patronales: 25, charges_salariales: 13.07, autres_charges_pat: 5, frais_deplacement_h: 0, coef_productivite: 0.85, notes: "" },
+    { code: "MO_TECH", profil: "Technicien", ref_cp: "CP124", salaire_brut_h: 26.00, charges_patronales: 25, charges_salariales: 13.07, autres_charges_pat: 5, frais_deplacement_h: 0, coef_productivite: 0.85, notes: "" },
+  ],
+  materiaux: [
+    { code: "BETON_C25", designation: "Béton C25/30 prêt à l'emploi", unite: "m³", prix_unit_ht: 95.00, perte_defaut: 3, fournisseur: "", notes: "" },
+    { code: "ACIER_HA10", designation: "Acier HA 10 mm", unite: "kg", prix_unit_ht: 1.45, perte_defaut: 5, fournisseur: "", notes: "" },
+    { code: "BLOC_14", designation: "Bloc béton 14 cm", unite: "pc", prix_unit_ht: 1.80, perte_defaut: 5, fournisseur: "", notes: "" },
+    { code: "MORTIER", designation: "Mortier colle", unite: "kg", prix_unit_ht: 0.35, perte_defaut: 10, fournisseur: "", notes: "" },
+    { code: "PLATRE", designation: "Plaque de plâtre BA13", unite: "m²", prix_unit_ht: 4.50, perte_defaut: 5, fournisseur: "", notes: "" },
+    { code: "CARRELAGE", designation: "Carrelage grès cérame 60x60", unite: "m²", prix_unit_ht: 22.00, perte_defaut: 8, fournisseur: "", notes: "" },
+    { code: "COLLE_CARR", designation: "Colle à carrelage", unite: "kg", prix_unit_ht: 0.45, perte_defaut: 10, fournisseur: "", notes: "" },
+    { code: "PAVE_BETON", designation: "Pavé béton 22x11x8", unite: "m²", prix_unit_ht: 18.00, perte_defaut: 3, fournisseur: "", notes: "" },
+    { code: "SABLE", designation: "Sable de pose", unite: "m³", prix_unit_ht: 32.00, perte_defaut: 5, fournisseur: "", notes: "" },
+    { code: "CABLE_2_5", designation: "Câble VOB 2.5mm²", unite: "ml", prix_unit_ht: 0.85, perte_defaut: 5, fournisseur: "", notes: "" },
+    { code: "GAINE_ELEC", designation: "Gaine ICTA 20mm", unite: "ml", prix_unit_ht: 0.55, perte_defaut: 3, fournisseur: "", notes: "" },
+    { code: "GAINE_VENT", designation: "Gaine alu flexible 125mm", unite: "ml", prix_unit_ht: 4.20, perte_defaut: 5, fournisseur: "", notes: "" },
+  ],
+  consommables: [
+    { code: "FILM_PE", designation: "Film polyéthylène 200µm", unite: "m²", prix_unit_ht: 0.40, perte_defaut: 10, notes: "" },
+    { code: "LIGATURE", designation: "Fil de ligature", unite: "kg", prix_unit_ht: 2.50, perte_defaut: 5, notes: "" },
+    { code: "CROISILLON", designation: "Croisillons 3mm", unite: "pc", prix_unit_ht: 0.02, perte_defaut: 0, notes: "" },
+    { code: "VIS_PLATRE", designation: "Vis plaque de plâtre 35mm", unite: "pc", prix_unit_ht: 0.015, perte_defaut: 5, notes: "" },
+    { code: "BANDE_JOINT", designation: "Bande à joint", unite: "ml", prix_unit_ht: 0.08, perte_defaut: 5, notes: "" },
+    { code: "ACCESSOIRE_VENT", designation: "Accessoires ventilation (coudes, raccords)", unite: "pc", prix_unit_ht: 3.50, perte_defaut: 0, notes: "" },
+  ],
+  engins: [
+    { code: "BETONNIERE", designation: "Bétonnière 350L", mode_tarif: "Journalier", cout_h_base: 0, cout_jour: 45.00, heures_jour_ref: 8, cout_forfait: 0, heures_forfait_ref: 0, carburant_h: 3.50, entretien_h: 1.00, coef_utilisation: 0.85, notes: "" },
+    { code: "MINI_PELLE", designation: "Mini-pelle 1.5T", mode_tarif: "Journalier", cout_h_base: 0, cout_jour: 180.00, heures_jour_ref: 8, cout_forfait: 0, heures_forfait_ref: 0, carburant_h: 8.00, entretien_h: 3.00, coef_utilisation: 0.80, notes: "" },
+    { code: "PLAQUE_VIB", designation: "Plaque vibrante", mode_tarif: "Journalier", cout_h_base: 0, cout_jour: 55.00, heures_jour_ref: 8, cout_forfait: 0, heures_forfait_ref: 0, carburant_h: 2.00, entretien_h: 0.50, coef_utilisation: 0.85, notes: "" },
+  ],
+  postes: [
+    {
+      code: "DEM-001", famille: "Démolition", sous_famille: "", designation: "Démolition cloison brique", unite: "m²", regle_metre: "L*l", epaisseur_defaut: 0, coef_perte_global: 0, coef_chantier: 1, mode_marge_override: "", tva_override: null, poste_st: false, notes: "",
+      compo_mo: [{ code_mo: "MO_MAN", heures_unitaire: 0.45, coef_prod_override: null, notes: "" }],
+      compo_mat: [],
+      compo_cons: [{ code_cons: "FILM_PE", qte_unitaire: 0.50, perte_override: null, notes: "protection sol" }],
+      compo_eng: [],
+      compo_st: [],
+    },
+    {
+      code: "DEM-002", famille: "Démolition", sous_famille: "", designation: "Dépose carrelage", unite: "m²", regle_metre: "L*l", epaisseur_defaut: 0, coef_perte_global: 0, coef_chantier: 1, mode_marge_override: "", tva_override: null, poste_st: false, notes: "",
+      compo_mo: [{ code_mo: "MO_MAN", heures_unitaire: 0.55, coef_prod_override: null, notes: "" }],
+      compo_mat: [],
+      compo_cons: [{ code_cons: "FILM_PE", qte_unitaire: 0.30, perte_override: null, notes: "" }],
+      compo_eng: [],
+      compo_st: [],
+    },
+    {
+      code: "GO-001", famille: "Gros oeuvre", sous_famille: "", designation: "Dalle béton armé 15 cm", unite: "m²", regle_metre: "L*l", epaisseur_defaut: 0.15, coef_perte_global: 0, coef_chantier: 1, mode_marge_override: "", tva_override: null, poste_st: false, notes: "",
+      compo_mo: [
+        { code_mo: "MO_Q2", heures_unitaire: 0.35, coef_prod_override: null, notes: "" },
+        { code_mo: "MO_CE", heures_unitaire: 0.08, coef_prod_override: null, notes: "" },
+        { code_mo: "MO_MAN", heures_unitaire: 0.20, coef_prod_override: null, notes: "" },
+      ],
+      compo_mat: [
+        { code_mat: "BETON_C25", qte_unitaire: 0.15, perte_override: null, notes: "" },
+        { code_mat: "ACIER_HA10", qte_unitaire: 8.0, perte_override: null, notes: "" },
+      ],
+      compo_cons: [
+        { code_cons: "FILM_PE", qte_unitaire: 1.05, perte_override: null, notes: "" },
+        { code_cons: "LIGATURE", qte_unitaire: 0.10, perte_override: null, notes: "" },
+      ],
+      compo_eng: [
+        { code_engin: "BETONNIERE", heures_unitaire: 0.05, notes: "" },
+      ],
+      compo_st: [],
+    },
+    {
+      code: "GO-002", famille: "Gros oeuvre", sous_famille: "", designation: "Maçonnerie bloc 14 cm", unite: "m²", regle_metre: "L*H", epaisseur_defaut: 0.14, coef_perte_global: 0, coef_chantier: 1, mode_marge_override: "", tva_override: null, poste_st: false, notes: "",
+      compo_mo: [
+        { code_mo: "MO_Q1", heures_unitaire: 0.65, coef_prod_override: null, notes: "" },
+        { code_mo: "MO_MAN", heures_unitaire: 0.30, coef_prod_override: null, notes: "" },
+      ],
+      compo_mat: [
+        { code_mat: "BLOC_14", qte_unitaire: 12.5, perte_override: null, notes: "" },
+        { code_mat: "MORTIER", qte_unitaire: 4.0, perte_override: null, notes: "" },
+      ],
+      compo_cons: [],
+      compo_eng: [],
+      compo_st: [],
+    },
+    {
+      code: "PAR-001", famille: "Parachèvement", sous_famille: "", designation: "Plafonnage / plâtre", unite: "m²", regle_metre: "L*l", epaisseur_defaut: 0, coef_perte_global: 0, coef_chantier: 1, mode_marge_override: "", tva_override: null, poste_st: false, notes: "",
+      compo_mo: [
+        { code_mo: "MO_Q2", heures_unitaire: 0.30, coef_prod_override: null, notes: "" },
+        { code_mo: "MO_MAN", heures_unitaire: 0.10, coef_prod_override: null, notes: "" },
+      ],
+      compo_mat: [
+        { code_mat: "PLATRE", qte_unitaire: 1.0, perte_override: null, notes: "" },
+      ],
+      compo_cons: [
+        { code_cons: "VIS_PLATRE", qte_unitaire: 12, perte_override: null, notes: "" },
+        { code_cons: "BANDE_JOINT", qte_unitaire: 0.80, perte_override: null, notes: "" },
+      ],
+      compo_eng: [],
+      compo_st: [],
+    },
+    {
+      code: "PAR-002", famille: "Parachèvement", sous_famille: "", designation: "Carrelage sol pose + colle", unite: "m²", regle_metre: "L*l", epaisseur_defaut: 0, coef_perte_global: 0, coef_chantier: 1, mode_marge_override: "", tva_override: null, poste_st: false, notes: "",
+      compo_mo: [
+        { code_mo: "MO_Q2", heures_unitaire: 0.50, coef_prod_override: null, notes: "" },
+        { code_mo: "MO_MAN", heures_unitaire: 0.15, coef_prod_override: null, notes: "" },
+      ],
+      compo_mat: [
+        { code_mat: "CARRELAGE", qte_unitaire: 1.0, perte_override: null, notes: "" },
+        { code_mat: "COLLE_CARR", qte_unitaire: 5.0, perte_override: null, notes: "" },
+      ],
+      compo_cons: [
+        { code_cons: "CROISILLON", qte_unitaire: 16, perte_override: null, notes: "" },
+      ],
+      compo_eng: [],
+      compo_st: [],
+    },
+    {
+      code: "ABO-001", famille: "Abords", sous_famille: "", designation: "Terrassement léger + nivellement", unite: "m²", regle_metre: "L*l", epaisseur_defaut: 0.20, coef_perte_global: 0, coef_chantier: 1, mode_marge_override: "", tva_override: null, poste_st: false, notes: "",
+      compo_mo: [
+        { code_mo: "MO_MAN", heures_unitaire: 0.25, coef_prod_override: null, notes: "" },
+      ],
+      compo_mat: [],
+      compo_cons: [],
+      compo_eng: [
+        { code_engin: "MINI_PELLE", heures_unitaire: 0.15, notes: "" },
+      ],
+      compo_st: [],
+    },
+    {
+      code: "ABO-002", famille: "Abords", sous_famille: "", designation: "Pavage béton", unite: "m²", regle_metre: "L*l", epaisseur_defaut: 0, coef_perte_global: 0, coef_chantier: 1, mode_marge_override: "", tva_override: null, poste_st: false, notes: "",
+      compo_mo: [
+        { code_mo: "MO_Q1", heures_unitaire: 0.45, coef_prod_override: null, notes: "" },
+        { code_mo: "MO_MAN", heures_unitaire: 0.20, coef_prod_override: null, notes: "" },
+      ],
+      compo_mat: [
+        { code_mat: "PAVE_BETON", qte_unitaire: 1.0, perte_override: null, notes: "" },
+        { code_mat: "SABLE", qte_unitaire: 0.05, perte_override: null, notes: "" },
+      ],
+      compo_cons: [],
+      compo_eng: [
+        { code_engin: "PLAQUE_VIB", heures_unitaire: 0.05, notes: "" },
+      ],
+      compo_st: [],
+    },
+    {
+      code: "TS-001", famille: "Techniques spéciales", sous_famille: "Électricité", designation: "Câblage électrique", unite: "ml", regle_metre: "L", epaisseur_defaut: 0, coef_perte_global: 0, coef_chantier: 1, mode_marge_override: "", tva_override: null, poste_st: false, notes: "",
+      compo_mo: [
+        { code_mo: "MO_TECH", heures_unitaire: 0.20, coef_prod_override: null, notes: "" },
+      ],
+      compo_mat: [
+        { code_mat: "CABLE_2_5", qte_unitaire: 1.0, perte_override: null, notes: "" },
+        { code_mat: "GAINE_ELEC", qte_unitaire: 1.0, perte_override: null, notes: "" },
+      ],
+      compo_cons: [],
+      compo_eng: [],
+      compo_st: [],
+    },
+    {
+      code: "TS-002", famille: "Techniques spéciales", sous_famille: "Ventilation", designation: "Ventilation : pose gaine", unite: "ml", regle_metre: "L", epaisseur_defaut: 0, coef_perte_global: 0, coef_chantier: 1, mode_marge_override: "", tva_override: null, poste_st: false, notes: "",
+      compo_mo: [
+        { code_mo: "MO_TECH", heures_unitaire: 0.30, coef_prod_override: null, notes: "" },
+      ],
+      compo_mat: [
+        { code_mat: "GAINE_VENT", qte_unitaire: 1.0, perte_override: null, notes: "" },
+      ],
+      compo_cons: [
+        { code_cons: "ACCESSOIRE_VENT", qte_unitaire: 0.3, perte_override: null, notes: "" },
+      ],
+      compo_eng: [],
+      compo_st: [],
+    },
+  ],
+  metres: [],
+  devis: {
+    numero: "2026-001",
+    date: new Date().toISOString().slice(0, 10),
+    client_nom: "",
+    client_adresse: "",
+    chantier: "",
+    reference: "",
+    conditions: "Validité : 30 jours. Paiement : 30 jours date facture.",
+  },
+};
+
+let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+
+// Load from localStorage
+function loadState() {
+  try {
+    const saved = localStorage.getItem('chiffrage_batiment_state');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      state = mergeDeep(JSON.parse(JSON.stringify(DEFAULT_STATE)), parsed);
+    }
+  } catch(e) { console.warn('Erreur chargement:', e); }
+}
+
+function saveState() {
+  try { localStorage.setItem('chiffrage_batiment_state', JSON.stringify(state)); } catch(e) {}
+}
+
+function mergeDeep(target, source) {
+  for (const key of Object.keys(source)) {
+    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key]) && target[key]) {
+      mergeDeep(target[key], source[key]);
+    } else {
+      target[key] = source[key];
+    }
+  }
+  return target;
+}
+
+// ============================================================
+// CALCUL ENGINE
+// ============================================================
+function coutEmployeurH(mo) {
+  return mo.salaire_brut_h * (1 + mo.charges_patronales/100 + mo.autres_charges_pat/100) + mo.frais_deplacement_h;
+}
+
+function tauxHPR(mo) {
+  const ce = coutEmployeurH(mo);
+  return ce / Math.max(0.01, mo.coef_productivite);
+}
+
+function enginCoutHTotal(eng) {
+  let base = 0;
+  if (eng.mode_tarif === "Horaire") base = eng.cout_h_base;
+  else if (eng.mode_tarif === "Journalier") base = eng.cout_jour / Math.max(0.1, eng.heures_jour_ref);
+  else if (eng.mode_tarif === "Forfait") base = eng.cout_forfait / Math.max(0.1, eng.heures_forfait_ref);
+  return (base + eng.carburant_h + eng.entretien_h) / Math.max(0.01, eng.coef_utilisation);
+}
+
+function calcQte(ligne) {
+  const L = ligne.L_m || 0;
+  const l = ligne.l_m || 0;
+  const h = ligne.h_m || 0;
+  const e = ligne.epaisseur_m || 0;
+  const nb = ligne.nb || 1;
+  const coef = ligne.coef || 1;
+  const signe = ligne.signe || 1;
+  const reg = ligne.regle_metre || "L*l";
+
+  let base = 0;
+  if (ligne.qte_saisie) return ligne.qte_saisie * signe;
+
+  switch(reg) {
+    case "L*l": base = L * l * nb; break;
+    case "L*H": base = L * h * nb; break;
+    case "L*l*h": base = L * l * (e > 0 ? e : h) * nb; break;
+    case "L": base = L * nb; break;
+    case "Nb": base = nb; break;
+    case "Forfait": base = nb; break;
+    default: base = L * l * nb;
+  }
+  const arr = state.params.arrondi_qte || 0.01;
+  return Math.round(base * coef / arr) * arr * signe;
+}
+
+function prMOUnitaire(poste) {
+  let total = 0;
+  for (const c of (poste.compo_mo || [])) {
+    const mo = state.mainOeuvre.find(m => m.code === c.code_mo);
+    if (!mo) continue;
+    const taux = tauxHPR(c.coef_prod_override != null ? {...mo, coef_productivite: c.coef_prod_override} : mo);
+    total += c.heures_unitaire * taux;
+  }
+  return Math.round(total * 100) / 100;
+}
+
+function prMATUnitaire(poste) {
+  let total = 0;
+  for (const c of (poste.compo_mat || [])) {
+    const mat = state.materiaux.find(m => m.code === c.code_mat);
+    if (!mat) continue;
+    const perte = (c.perte_override != null ? c.perte_override : mat.perte_defaut) / 100;
+    total += c.qte_unitaire * (1 + perte) * mat.prix_unit_ht;
+  }
+  return Math.round(total * 100) / 100;
+}
+
+function prCONSUnitaire(poste) {
+  let total = 0;
+  for (const c of (poste.compo_cons || [])) {
+    const cons = state.consommables.find(m => m.code === c.code_cons);
+    if (!cons) continue;
+    const perte = (c.perte_override != null ? c.perte_override : cons.perte_defaut) / 100;
+    total += c.qte_unitaire * (1 + perte) * cons.prix_unit_ht;
+  }
+  return Math.round(total * 100) / 100;
+}
+
+function prENGUnitaire(poste) {
+  let total = 0;
+  for (const c of (poste.compo_eng || [])) {
+    const eng = state.engins.find(m => m.code === c.code_engin);
+    if (!eng) continue;
+    total += c.heures_unitaire * enginCoutHTotal(eng);
+  }
+  return Math.round(total * 100) / 100;
+}
+
+function prSTUnitaire(poste) {
+  let total = 0;
+  for (const c of (poste.compo_st || [])) {
+    total += (c.qte_unitaire || 0) * (c.prix_unit_ht || 0) * (1 + (c.marge_st || 10) / 100);
+  }
+  return Math.round(total * 100) / 100;
+}
+
+function prDirectUnitaire(poste) {
+  return prMOUnitaire(poste) + prMATUnitaire(poste) + prCONSUnitaire(poste) + prENGUnitaire(poste) + prSTUnitaire(poste);
+}
+
+function coutCompletUnitaire(poste) {
+  const pr = prDirectUnitaire(poste);
+  return Math.round(pr * (1 + state.params.fg_chantier/100 + state.params.fg_entreprise/100) * 100) / 100;
+}
+
+function pvUnitaireHT(poste) {
+  const cc = coutCompletUnitaire(poste);
+  const mode = poste.mode_marge_override || state.params.mode_marge;
+  const marge = state.params.marge_pct / 100;
+  const coeff = state.params.coeff_vente || 1.35;
+  switch(mode) {
+    case "markup": return Math.round(cc * (1 + marge) * 100) / 100;
+    case "coeff": return Math.round(cc * coeff * 100) / 100;
+    case "marge_pv": return Math.round(cc / (1 - marge) * 100) / 100;
+    default: return Math.round(cc * (1 + marge) * 100) / 100;
+  }
+}
+
+function getTVA(poste) {
+  if (poste.tva_override != null) return poste.tva_override;
+  return state.params.tva_mode === "renovation" ? state.params.tva_renovation : state.params.tva_standard;
+}
+
+function pvTTC(poste, qte) {
+  return Math.round(pvUnitaireHT(poste) * qte * (1 + getTVA(poste)/100) * 100) / 100;
+}
+
+// Aggregate metres for a poste
+function qteTotalePoste(codePoste) {
+  let total = 0;
+  for (const m of state.metres) {
+    if (m.code_poste === codePoste) total += calcQte(m);
+  }
+  return Math.round(total * 1000) / 1000;
+}
+
+// ============================================================
+// RENDER ENGINE
+// ============================================================
+let currentTab = 'params';
+let currentSubTab = 'mo';
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.querySelector(`.nav-item[data-tab="${tab}"]`)?.classList.add('active');
+  render();
+}
+
+function render() {
+  const content = document.getElementById('content-area');
+  const title = document.getElementById('page-title');
+  const actions = document.getElementById('page-actions');
+  actions.innerHTML = '';
+
+  updateBadges();
+
+  switch(currentTab) {
+    case 'params': title.textContent = 'Paramètres généraux'; renderParams(content); break;
+    case 'bases': title.textContent = 'Bases de données'; renderBases(content, actions); break;
+    case 'postes': title.textContent = 'Bibliothèque des postes'; renderPostes(content, actions); break;
+    case 'metres': title.textContent = 'Métrés & Chiffrage'; renderMetres(content, actions); break;
+    case 'synthese': title.textContent = 'Synthèse & Devis'; renderSynthese(content, actions); break;
+  }
+  saveState();
+}
+
+function updateBadges() {
+  const totalBases = state.mainOeuvre.length + state.materiaux.length + state.consommables.length + state.engins.length;
+  document.getElementById('badge-bases').textContent = totalBases;
+  document.getElementById('badge-postes').textContent = state.postes.length;
+  document.getElementById('badge-metres').textContent = state.metres.length;
+}
+
+function fmt(n) { return n.toLocaleString('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function fmtPct(n) { return n.toFixed(1) + '%'; }
+
+// ============================================================
+// TAB: PARAMETRES
+// ============================================================
+function renderParams(el) {
+  el.innerHTML = `
+    <div class="info-banner">
+      Les valeurs par défaut sont basées sur les repères officiels belges (ONSS, SPF Finances, CP124).
+      Adaptez-les à votre situation réelle.
+    </div>
+    <div class="section">
+      <div class="section-title">Charges sociales et productivité</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Charges patronales (%)</label>
+          <input type="number" step="0.01" value="${state.params.charges_patronales}" onchange="state.params.charges_patronales=+this.value;render()">
+          <span class="hint">Repère ONSS : 25% (secteur privé à but lucratif)</span>
+        </div>
+        <div class="form-group">
+          <label>Charges salariales (%)</label>
+          <input type="number" step="0.01" value="${state.params.charges_salariales}" onchange="state.params.charges_salariales=+this.value;render()">
+          <span class="hint">Repère ONSS : 13,07%</span>
+        </div>
+        <div class="form-group">
+          <label>Autres charges patronales (%)</label>
+          <input type="number" step="0.01" value="${state.params.autres_charges_pat}" onchange="state.params.autres_charges_pat=+this.value;render()">
+          <span class="hint">Fonds sectoriels, primes, etc.</span>
+        </div>
+        <div class="form-group">
+          <label>Coefficient de productivité</label>
+          <input type="number" step="0.01" min="0.01" max="1" value="${state.params.coef_productivite}" onchange="state.params.coef_productivite=+this.value;render()">
+          <span class="hint">0.85 = 85% des heures sont productives</span>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">Frais généraux et marge</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>FG Chantier (%)</label>
+          <input type="number" step="0.1" value="${state.params.fg_chantier}" onchange="state.params.fg_chantier=+this.value;render()">
+        </div>
+        <div class="form-group">
+          <label>FG Entreprise (%)</label>
+          <input type="number" step="0.1" value="${state.params.fg_entreprise}" onchange="state.params.fg_entreprise=+this.value;render()">
+        </div>
+        <div class="form-group">
+          <label>Mode de marge</label>
+          <select onchange="state.params.mode_marge=this.value;render()">
+            <option value="markup" ${state.params.mode_marge==='markup'?'selected':''}>Markup sur coût</option>
+            <option value="coeff" ${state.params.mode_marge==='coeff'?'selected':''}>Coefficient de vente</option>
+            <option value="marge_pv" ${state.params.mode_marge==='marge_pv'?'selected':''}>Marge sur PV</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>${state.params.mode_marge === 'coeff' ? 'Coefficient de vente' : 'Marge (%)'}</label>
+          ${state.params.mode_marge === 'coeff'
+            ? `<input type="number" step="0.01" value="${state.params.coeff_vente}" onchange="state.params.coeff_vente=+this.value;render()">`
+            : `<input type="number" step="0.1" value="${state.params.marge_pct}" onchange="state.params.marge_pct=+this.value;render()">`
+          }
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">TVA</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Mode TVA</label>
+          <select onchange="state.params.tva_mode=this.value;render()">
+            <option value="standard" ${state.params.tva_mode==='standard'?'selected':''}>Standard (21%)</option>
+            <option value="renovation" ${state.params.tva_mode==='renovation'?'selected':''}>Rénovation (6%)</option>
+          </select>
+          <span class="hint">6% : habitation >= 10 ans, sous conditions SPF Finances</span>
+        </div>
+        <div class="form-group">
+          <label>Arrondi quantités</label>
+          <input type="number" step="0.001" value="${state.params.arrondi_qte}" onchange="state.params.arrondi_qte=+this.value;render()">
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">Entreprise (en-tête devis)</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Nom</label>
+          <input type="text" value="${esc(state.params.entreprise_nom)}" onchange="state.params.entreprise_nom=this.value;saveState()">
+        </div>
+        <div class="form-group">
+          <label>Adresse</label>
+          <input type="text" value="${esc(state.params.entreprise_adresse)}" onchange="state.params.entreprise_adresse=this.value;saveState()">
+        </div>
+        <div class="form-group">
+          <label>N° TVA</label>
+          <input type="text" value="${esc(state.params.entreprise_tva)}" onchange="state.params.entreprise_tva=this.value;saveState()">
+        </div>
+        <div class="form-group">
+          <label>Contact</label>
+          <input type="text" value="${esc(state.params.entreprise_contact)}" onchange="state.params.entreprise_contact=this.value;saveState()">
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function esc(s) { return (s||'').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+
+// ============================================================
+// TAB: BASES DE DONNEES
+// ============================================================
+function renderBases(el, actions) {
+  actions.innerHTML = `<button class="btn btn-primary btn-sm" onclick="addBaseRow()">+ Ajouter</button>`;
+  el.innerHTML = `
+    <div class="sub-tabs">
+      <div class="sub-tab ${currentSubTab==='mo'?'active':''}" onclick="currentSubTab='mo';render()">Main-d'oeuvre (${state.mainOeuvre.length})</div>
+      <div class="sub-tab ${currentSubTab==='mat'?'active':''}" onclick="currentSubTab='mat';render()">Matériaux (${state.materiaux.length})</div>
+      <div class="sub-tab ${currentSubTab==='cons'?'active':''}" onclick="currentSubTab='cons';render()">Consommables (${state.consommables.length})</div>
+      <div class="sub-tab ${currentSubTab==='eng'?'active':''}" onclick="currentSubTab='eng';render()">Engins (${state.engins.length})</div>
+    </div>
+    <div id="base-table-area"></div>
+  `;
+
+  const area = document.getElementById('base-table-area');
+  switch(currentSubTab) {
+    case 'mo': renderMOTable(area); break;
+    case 'mat': renderMATTable(area); break;
+    case 'cons': renderCONSTable(area); break;
+    case 'eng': renderENGTable(area); break;
+  }
+}
+
+function renderMOTable(el) {
+  el.innerHTML = `
+    <div class="info-banner">Salaires bruts basés sur les barèmes CP124 (suggestions). Adaptez à vos valeurs réelles.</div>
+    <table class="data-table">
+      <thead><tr>
+        <th>Code</th><th>Profil</th><th>Salaire brut/h</th><th>Ch. pat. %</th><th>Ch. sal. %</th><th>Autres %</th>
+        <th>Dépl./h</th><th>Productivité</th><th>Coût empl./h</th><th>Taux PR/h</th><th></th>
+      </tr></thead>
+      <tbody>
+      ${state.mainOeuvre.map((mo, i) => `<tr>
+        <td><input value="${esc(mo.code)}" onchange="state.mainOeuvre[${i}].code=this.value;render()"></td>
+        <td><input value="${esc(mo.profil)}" onchange="state.mainOeuvre[${i}].profil=this.value;render()"></td>
+        <td><input type="number" step="0.01" value="${mo.salaire_brut_h}" onchange="state.mainOeuvre[${i}].salaire_brut_h=+this.value;render()"></td>
+        <td><input type="number" step="0.01" value="${mo.charges_patronales}" onchange="state.mainOeuvre[${i}].charges_patronales=+this.value;render()"></td>
+        <td><input type="number" step="0.01" value="${mo.charges_salariales}" onchange="state.mainOeuvre[${i}].charges_salariales=+this.value;render()"></td>
+        <td><input type="number" step="0.01" value="${mo.autres_charges_pat}" onchange="state.mainOeuvre[${i}].autres_charges_pat=+this.value;render()"></td>
+        <td><input type="number" step="0.01" value="${mo.frais_deplacement_h}" onchange="state.mainOeuvre[${i}].frais_deplacement_h=+this.value;render()"></td>
+        <td><input type="number" step="0.01" value="${mo.coef_productivite}" onchange="state.mainOeuvre[${i}].coef_productivite=+this.value;render()"></td>
+        <td class="computed">${fmt(coutEmployeurH(mo))}</td>
+        <td class="computed">${fmt(tauxHPR(mo))}</td>
+        <td><button class="row-delete" onclick="state.mainOeuvre.splice(${i},1);render()">&#10005;</button></td>
+      </tr>`).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderMATTable(el) {
+  el.innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Code</th><th>Désignation</th><th>Unité</th><th>Prix unit. HT</th><th>Perte %</th><th>Fournisseur</th><th></th></tr></thead>
+      <tbody>
+      ${state.materiaux.map((m, i) => `<tr>
+        <td><input value="${esc(m.code)}" onchange="state.materiaux[${i}].code=this.value;render()"></td>
+        <td><input value="${esc(m.designation)}" onchange="state.materiaux[${i}].designation=this.value;render()"></td>
+        <td><input value="${esc(m.unite)}" onchange="state.materiaux[${i}].unite=this.value;render()" style="width:60px"></td>
+        <td><input type="number" step="0.01" value="${m.prix_unit_ht}" onchange="state.materiaux[${i}].prix_unit_ht=+this.value;render()"></td>
+        <td><input type="number" step="0.1" value="${m.perte_defaut}" onchange="state.materiaux[${i}].perte_defaut=+this.value;render()"></td>
+        <td><input value="${esc(m.fournisseur||'')}" onchange="state.materiaux[${i}].fournisseur=this.value;saveState()"></td>
+        <td><button class="row-delete" onclick="state.materiaux.splice(${i},1);render()">&#10005;</button></td>
+      </tr>`).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderCONSTable(el) {
+  el.innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Code</th><th>Désignation</th><th>Unité</th><th>Prix unit. HT</th><th>Perte %</th><th></th></tr></thead>
+      <tbody>
+      ${state.consommables.map((c, i) => `<tr>
+        <td><input value="${esc(c.code)}" onchange="state.consommables[${i}].code=this.value;render()"></td>
+        <td><input value="${esc(c.designation)}" onchange="state.consommables[${i}].designation=this.value;render()"></td>
+        <td><input value="${esc(c.unite)}" onchange="state.consommables[${i}].unite=this.value;render()" style="width:60px"></td>
+        <td><input type="number" step="0.001" value="${c.prix_unit_ht}" onchange="state.consommables[${i}].prix_unit_ht=+this.value;render()"></td>
+        <td><input type="number" step="0.1" value="${c.perte_defaut}" onchange="state.consommables[${i}].perte_defaut=+this.value;render()"></td>
+        <td><button class="row-delete" onclick="state.consommables.splice(${i},1);render()">&#10005;</button></td>
+      </tr>`).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderENGTable(el) {
+  el.innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Code</th><th>Désignation</th><th>Mode tarif</th><th>Coût base</th><th>Coût/jour</th><th>h/jour</th><th>Carb./h</th><th>Entr./h</th><th>Utilisation</th><th>Coût/h total</th><th></th></tr></thead>
+      <tbody>
+      ${state.engins.map((e, i) => `<tr>
+        <td><input value="${esc(e.code)}" onchange="state.engins[${i}].code=this.value;render()"></td>
+        <td><input value="${esc(e.designation)}" onchange="state.engins[${i}].designation=this.value;render()"></td>
+        <td><select onchange="state.engins[${i}].mode_tarif=this.value;render()">
+          <option value="Horaire" ${e.mode_tarif==='Horaire'?'selected':''}>Horaire</option>
+          <option value="Journalier" ${e.mode_tarif==='Journalier'?'selected':''}>Journalier</option>
+          <option value="Forfait" ${e.mode_tarif==='Forfait'?'selected':''}>Forfait</option>
+        </select></td>
+        <td><input type="number" step="0.01" value="${e.cout_h_base}" onchange="state.engins[${i}].cout_h_base=+this.value;render()"></td>
+        <td><input type="number" step="0.01" value="${e.cout_jour}" onchange="state.engins[${i}].cout_jour=+this.value;render()"></td>
+        <td><input type="number" step="0.1" value="${e.heures_jour_ref}" onchange="state.engins[${i}].heures_jour_ref=+this.value;render()"></td>
+        <td><input type="number" step="0.01" value="${e.carburant_h}" onchange="state.engins[${i}].carburant_h=+this.value;render()"></td>
+        <td><input type="number" step="0.01" value="${e.entretien_h}" onchange="state.engins[${i}].entretien_h=+this.value;render()"></td>
+        <td><input type="number" step="0.01" value="${e.coef_utilisation}" onchange="state.engins[${i}].coef_utilisation=+this.value;render()"></td>
+        <td class="computed">${fmt(enginCoutHTotal(e))}</td>
+        <td><button class="row-delete" onclick="state.engins.splice(${i},1);render()">&#10005;</button></td>
+      </tr>`).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function addBaseRow() {
+  switch(currentSubTab) {
+    case 'mo': state.mainOeuvre.push({ code: "MO_NEW", profil: "Nouveau", ref_cp: "CP124", salaire_brut_h: 18, charges_patronales: state.params.charges_patronales, charges_salariales: state.params.charges_salariales, autres_charges_pat: state.params.autres_charges_pat, frais_deplacement_h: 0, coef_productivite: state.params.coef_productivite, notes: "" }); break;
+    case 'mat': state.materiaux.push({ code: "MAT_NEW", designation: "Nouveau matériau", unite: "pc", prix_unit_ht: 0, perte_defaut: 5, fournisseur: "", notes: "" }); break;
+    case 'cons': state.consommables.push({ code: "CONS_NEW", designation: "Nouveau consommable", unite: "pc", prix_unit_ht: 0, perte_defaut: 0, notes: "" }); break;
+    case 'eng': state.engins.push({ code: "ENG_NEW", designation: "Nouvel engin", mode_tarif: "Journalier", cout_h_base: 0, cout_jour: 0, heures_jour_ref: 8, cout_forfait: 0, heures_forfait_ref: 0, carburant_h: 0, entretien_h: 0, coef_utilisation: 0.85, notes: "" }); break;
+  }
+  render();
+}
+
+// ============================================================
+// TAB: BIBLIOTHEQUE DES POSTES
+// ============================================================
+function renderPostes(el, actions) {
+  actions.innerHTML = `<button class="btn btn-primary btn-sm" onclick="addPoste()">+ Nouveau poste</button>`;
+
+  const familles = [...new Set(state.postes.map(p => p.famille))];
+  el.innerHTML = `
+    <div class="info-banner">Cliquez sur un poste pour voir et modifier sa composition détaillée (MO, MAT, CONS, ENG, ST).</div>
+    ${familles.map(fam => `
+      <div class="section">
+        <div class="section-title">${fam} (${state.postes.filter(p=>p.famille===fam).length} postes)</div>
+        <table class="data-table">
+          <thead><tr><th>Code</th><th>Désignation</th><th>Unité</th><th>Règle métré</th><th>PR unit.</th><th>PV unit. HT</th><th></th></tr></thead>
+          <tbody>
+          ${state.postes.filter(p=>p.famille===fam).map((p, i) => {
+            const idx = state.postes.indexOf(p);
+            return `<tr style="cursor:pointer" onclick="openPostePanel(${idx})">
+              <td><strong>${esc(p.code)}</strong></td>
+              <td>${esc(p.designation)}</td>
+              <td>${esc(p.unite)}</td>
+              <td>${esc(p.regle_metre)}</td>
+              <td class="computed">${fmt(prDirectUnitaire(p))}</td>
+              <td class="computed">${fmt(pvUnitaireHT(p))}</td>
+              <td><button class="row-delete" onclick="event.stopPropagation();state.postes.splice(${idx},1);render()">&#10005;</button></td>
+            </tr>`;
+          }).join('')}
+          </tbody>
+        </table>
+      </div>
+    `).join('')}
+  `;
+}
+
+function addPoste() {
+  state.postes.push({
+    code: "NEW-" + String(state.postes.length + 1).padStart(3,'0'),
+    famille: "Gros oeuvre", sous_famille: "", designation: "Nouveau poste", unite: "m²",
+    regle_metre: "L*l", epaisseur_defaut: 0, coef_perte_global: 0, coef_chantier: 1,
+    mode_marge_override: "", tva_override: null, poste_st: false, notes: "",
+    compo_mo: [], compo_mat: [], compo_cons: [], compo_eng: [], compo_st: [],
+  });
+  render();
+  openPostePanel(state.postes.length - 1);
+}
+
+function openPostePanel(idx) {
+  const panel = document.getElementById('poste-panel');
+  const body = document.getElementById('poste-panel-body');
+  const title = document.getElementById('poste-panel-title');
+  const p = state.postes[idx];
+  title.textContent = p.code + ' — ' + p.designation;
+
+  body.innerHTML = `
+    <div class="form-grid" style="margin-bottom:16px">
+      <div class="form-group"><label>Code</label><input value="${esc(p.code)}" onchange="state.postes[${idx}].code=this.value;render();openPostePanel(${idx})"></div>
+      <div class="form-group"><label>Famille</label>
+        <select onchange="state.postes[${idx}].famille=this.value;render()">
+          ${['Démolition','Gros oeuvre','Parachèvement','Abords','Techniques spéciales'].map(f=>`<option ${p.famille===f?'selected':''}>${f}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group"><label>Désignation</label><input value="${esc(p.designation)}" onchange="state.postes[${idx}].designation=this.value;render();openPostePanel(${idx})"></div>
+      <div class="form-group"><label>Unité</label><input value="${esc(p.unite)}" onchange="state.postes[${idx}].unite=this.value;render()" style="width:80px"></div>
+      <div class="form-group"><label>Règle métré</label>
+        <select onchange="state.postes[${idx}].regle_metre=this.value;render()">
+          ${['L*l','L*H','L*l*h','L','Nb','Forfait'].map(r=>`<option ${p.regle_metre===r?'selected':''}>${r}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div class="compo-section">
+      <h4>Main-d'oeuvre <button class="btn btn-sm" onclick="state.postes[${idx}].compo_mo.push({code_mo:'${state.mainOeuvre[0]?.code||''}',heures_unitaire:0,coef_prod_override:null,notes:''});openPostePanel(${idx})">+ Ajouter</button></h4>
+      <table class="data-table">
+        <thead><tr><th>Profil</th><th>Heures/unité</th><th>Taux PR/h</th><th>PR/unité</th><th></th></tr></thead>
+        <tbody>${(p.compo_mo||[]).map((c, ci) => {
+          const mo = state.mainOeuvre.find(m=>m.code===c.code_mo);
+          const taux = mo ? tauxHPR(c.coef_prod_override!=null?{...mo,coef_productivite:c.coef_prod_override}:mo) : 0;
+          return `<tr>
+            <td><select onchange="state.postes[${idx}].compo_mo[${ci}].code_mo=this.value;openPostePanel(${idx});render()">
+              ${state.mainOeuvre.map(m=>`<option value="${m.code}" ${c.code_mo===m.code?'selected':''}>${m.profil} (${m.code})</option>`).join('')}
+            </select></td>
+            <td><input type="number" step="0.01" value="${c.heures_unitaire}" onchange="state.postes[${idx}].compo_mo[${ci}].heures_unitaire=+this.value;openPostePanel(${idx});render()"></td>
+            <td class="computed">${fmt(taux)}</td>
+            <td class="computed">${fmt(c.heures_unitaire * taux)}</td>
+            <td><button class="row-delete" onclick="state.postes[${idx}].compo_mo.splice(${ci},1);openPostePanel(${idx});render()">&#10005;</button></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>
+
+    <div class="compo-section">
+      <h4>Matériaux <button class="btn btn-sm" onclick="state.postes[${idx}].compo_mat.push({code_mat:'${state.materiaux[0]?.code||''}',qte_unitaire:0,perte_override:null,notes:''});openPostePanel(${idx})">+ Ajouter</button></h4>
+      <table class="data-table">
+        <thead><tr><th>Matériau</th><th>Qté/unité</th><th>Perte %</th><th>Prix unit.</th><th>PR/unité</th><th></th></tr></thead>
+        <tbody>${(p.compo_mat||[]).map((c, ci) => {
+          const mat = state.materiaux.find(m=>m.code===c.code_mat);
+          const perte = c.perte_override!=null?c.perte_override:(mat?mat.perte_defaut:0);
+          const prix = mat?mat.prix_unit_ht:0;
+          return `<tr>
+            <td><select onchange="state.postes[${idx}].compo_mat[${ci}].code_mat=this.value;openPostePanel(${idx});render()">
+              ${state.materiaux.map(m=>`<option value="${m.code}" ${c.code_mat===m.code?'selected':''}>${m.designation} (${m.code})</option>`).join('')}
+            </select></td>
+            <td><input type="number" step="0.001" value="${c.qte_unitaire}" onchange="state.postes[${idx}].compo_mat[${ci}].qte_unitaire=+this.value;openPostePanel(${idx});render()"></td>
+            <td><input type="number" step="0.1" value="${perte}" onchange="state.postes[${idx}].compo_mat[${ci}].perte_override=+this.value;openPostePanel(${idx});render()"></td>
+            <td class="mono">${fmt(prix)}</td>
+            <td class="computed">${fmt(c.qte_unitaire * (1+perte/100) * prix)}</td>
+            <td><button class="row-delete" onclick="state.postes[${idx}].compo_mat.splice(${ci},1);openPostePanel(${idx});render()">&#10005;</button></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>
+
+    <div class="compo-section">
+      <h4>Consommables <button class="btn btn-sm" onclick="state.postes[${idx}].compo_cons.push({code_cons:'${state.consommables[0]?.code||''}',qte_unitaire:0,perte_override:null,notes:''});openPostePanel(${idx})">+ Ajouter</button></h4>
+      <table class="data-table">
+        <thead><tr><th>Consommable</th><th>Qté/unité</th><th>PR/unité</th><th></th></tr></thead>
+        <tbody>${(p.compo_cons||[]).map((c, ci) => {
+          const cons = state.consommables.find(m=>m.code===c.code_cons);
+          const perte = c.perte_override!=null?c.perte_override:(cons?cons.perte_defaut:0);
+          const prix = cons?cons.prix_unit_ht:0;
+          return `<tr>
+            <td><select onchange="state.postes[${idx}].compo_cons[${ci}].code_cons=this.value;openPostePanel(${idx});render()">
+              ${state.consommables.map(m=>`<option value="${m.code}" ${c.code_cons===m.code?'selected':''}>${m.designation} (${m.code})</option>`).join('')}
+            </select></td>
+            <td><input type="number" step="0.001" value="${c.qte_unitaire}" onchange="state.postes[${idx}].compo_cons[${ci}].qte_unitaire=+this.value;openPostePanel(${idx});render()"></td>
+            <td class="computed">${fmt(c.qte_unitaire * (1+perte/100) * prix)}</td>
+            <td><button class="row-delete" onclick="state.postes[${idx}].compo_cons.splice(${ci},1);openPostePanel(${idx});render()">&#10005;</button></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>
+
+    <div class="compo-section">
+      <h4>Engins <button class="btn btn-sm" onclick="state.postes[${idx}].compo_eng.push({code_engin:'${state.engins[0]?.code||''}',heures_unitaire:0,notes:''});openPostePanel(${idx})">+ Ajouter</button></h4>
+      <table class="data-table">
+        <thead><tr><th>Engin</th><th>Heures/unité</th><th>Coût/h</th><th>PR/unité</th><th></th></tr></thead>
+        <tbody>${(p.compo_eng||[]).map((c, ci) => {
+          const eng = state.engins.find(m=>m.code===c.code_engin);
+          const cout = eng?enginCoutHTotal(eng):0;
+          return `<tr>
+            <td><select onchange="state.postes[${idx}].compo_eng[${ci}].code_engin=this.value;openPostePanel(${idx});render()">
+              ${state.engins.map(m=>`<option value="${m.code}" ${c.code_engin===m.code?'selected':''}>${m.designation} (${m.code})</option>`).join('')}
+            </select></td>
+            <td><input type="number" step="0.01" value="${c.heures_unitaire}" onchange="state.postes[${idx}].compo_eng[${ci}].heures_unitaire=+this.value;openPostePanel(${idx});render()"></td>
+            <td class="mono">${fmt(cout)}</td>
+            <td class="computed">${fmt(c.heures_unitaire * cout)}</td>
+            <td><button class="row-delete" onclick="state.postes[${idx}].compo_eng.splice(${ci},1);openPostePanel(${idx});render()">&#10005;</button></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>
+
+    <div class="card" style="margin-top:16px;background:var(--primary-lighter)">
+      <div class="card-title">Récapitulatif prix unitaire</div>
+      <table class="data-table" style="font-size:13px">
+        <tr><td>PR Main-d'oeuvre</td><td class="computed">${fmt(prMOUnitaire(p))} EUR</td></tr>
+        <tr><td>PR Matériaux</td><td class="computed">${fmt(prMATUnitaire(p))} EUR</td></tr>
+        <tr><td>PR Consommables</td><td class="computed">${fmt(prCONSUnitaire(p))} EUR</td></tr>
+        <tr><td>PR Engins</td><td class="computed">${fmt(prENGUnitaire(p))} EUR</td></tr>
+        <tr><td>PR Sous-traitance</td><td class="computed">${fmt(prSTUnitaire(p))} EUR</td></tr>
+        <tr><td><strong>PR Direct unitaire</strong></td><td class="computed"><strong>${fmt(prDirectUnitaire(p))} EUR</strong></td></tr>
+        <tr><td>+ FG (${state.params.fg_chantier}% + ${state.params.fg_entreprise}%)</td><td class="computed">${fmt(coutCompletUnitaire(p) - prDirectUnitaire(p))} EUR</td></tr>
+        <tr><td><strong>Coût complet unitaire</strong></td><td class="computed"><strong>${fmt(coutCompletUnitaire(p))} EUR</strong></td></tr>
+        <tr><td><strong>PV unitaire HT</strong></td><td class="computed" style="color:var(--success)"><strong>${fmt(pvUnitaireHT(p))} EUR</strong></td></tr>
+      </table>
+    </div>
+  `;
+
+  panel.classList.add('open');
+}
+
+function closePostePanel() {
+  document.getElementById('poste-panel').classList.remove('open');
+}
+
+// ============================================================
+// TAB: METRES & CHIFFRAGE
+// ============================================================
+function renderMetres(el, actions) {
+  actions.innerHTML = `<button class="btn btn-primary btn-sm" onclick="addMetre()">+ Ligne de métré</button>`;
+
+  el.innerHTML = `
+    <div class="info-banner">Ajoutez des lignes de métré pour chaque zone/localisation. Les quantités et prix se calculent automatiquement.</div>
+    <div style="overflow-x:auto">
+    <table class="data-table">
+      <thead><tr>
+        <th>#</th><th>Poste</th><th>Localisation</th><th>L (m)</th><th>l (m)</th><th>h (m)</th>
+        <th>Ép. (m)</th><th>Nb</th><th>Coef</th><th>+/-</th><th>Qté saisie</th>
+        <th>Qté calc.</th><th>PR unit.</th><th>PR total</th><th>PV unit. HT</th><th>PV total HT</th><th></th>
+      </tr></thead>
+      <tbody>
+      ${state.metres.map((m, i) => {
+        const poste = state.postes.find(p => p.code === m.code_poste);
+        const qte = calcQte(m);
+        const pr = poste ? prDirectUnitaire(poste) : 0;
+        const pv = poste ? pvUnitaireHT(poste) : 0;
+        return `<tr>
+          <td>${i+1}</td>
+          <td><select onchange="state.metres[${i}].code_poste=this.value;updateMetreFromPoste(${i});render()">
+            <option value="">—</option>
+            ${state.postes.map(p=>`<option value="${p.code}" ${m.code_poste===p.code?'selected':''}>${p.code} — ${p.designation}</option>`).join('')}
+          </select></td>
+          <td><input value="${esc(m.localisation||'')}" onchange="state.metres[${i}].localisation=this.value;saveState()" style="width:100px"></td>
+          <td><input type="number" step="0.01" value="${m.L_m||0}" onchange="state.metres[${i}].L_m=+this.value;render()"></td>
+          <td><input type="number" step="0.01" value="${m.l_m||0}" onchange="state.metres[${i}].l_m=+this.value;render()"></td>
+          <td><input type="number" step="0.01" value="${m.h_m||0}" onchange="state.metres[${i}].h_m=+this.value;render()"></td>
+          <td><input type="number" step="0.001" value="${m.epaisseur_m||0}" onchange="state.metres[${i}].epaisseur_m=+this.value;render()"></td>
+          <td><input type="number" step="1" value="${m.nb||1}" onchange="state.metres[${i}].nb=+this.value;render()"></td>
+          <td><input type="number" step="0.01" value="${m.coef||1}" onchange="state.metres[${i}].coef=+this.value;render()"></td>
+          <td><select onchange="state.metres[${i}].signe=+this.value;render()">
+            <option value="1" ${(m.signe||1)===1?'selected':''}>+</option>
+            <option value="-1" ${m.signe===-1?'selected':''}>-</option>
+          </select></td>
+          <td><input type="number" step="0.01" value="${m.qte_saisie||''}" onchange="state.metres[${i}].qte_saisie=this.value?+this.value:null;render()" placeholder="auto"></td>
+          <td class="computed">${qte.toFixed(3)}</td>
+          <td class="computed">${fmt(pr)}</td>
+          <td class="computed">${fmt(pr * Math.abs(qte))}</td>
+          <td class="computed">${fmt(pv)}</td>
+          <td class="computed" style="font-weight:600">${fmt(pv * Math.abs(qte))}</td>
+          <td><button class="row-delete" onclick="state.metres.splice(${i},1);render()">&#10005;</button></td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table>
+    </div>
+  `;
+}
+
+function addMetre() {
+  state.metres.push({
+    code_poste: state.postes[0]?.code || '',
+    localisation: '',
+    L_m: 0, l_m: 0, h_m: 0, epaisseur_m: 0,
+    nb: 1, coef: 1, signe: 1,
+    qte_saisie: null,
+    regle_metre: state.postes[0]?.regle_metre || 'L*l',
+  });
+  render();
+}
+
+function updateMetreFromPoste(i) {
+  const poste = state.postes.find(p => p.code === state.metres[i].code_poste);
+  if (poste) {
+    state.metres[i].regle_metre = poste.regle_metre;
+    state.metres[i].epaisseur_m = poste.epaisseur_defaut || 0;
+  }
+}
+
+// ============================================================
+// TAB: SYNTHESE & DEVIS
+// ============================================================
+function renderSynthese(el, actions) {
+  actions.innerHTML = `
+    <button class="btn btn-primary btn-sm" onclick="exportPDF()">&#128196; Export PDF</button>
+    <button class="btn btn-success btn-sm" onclick="exportExcel()">&#128202; Export Excel</button>
+  `;
+
+  // Aggregate by poste
+  const posteAgg = {};
+  for (const p of state.postes) {
+    const qte = qteTotalePoste(p.code);
+    if (qte === 0 && state.metres.length > 0) continue;
+    const pr = prDirectUnitaire(p);
+    const cc = coutCompletUnitaire(p);
+    const pv = pvUnitaireHT(p);
+    const tva = getTVA(p);
+    posteAgg[p.code] = {
+      poste: p, qte, pr_unit: pr, cc_unit: cc, pv_unit: pv,
+      pr_total: pr * Math.abs(qte), pv_total_ht: pv * Math.abs(qte),
+      pv_total_ttc: pv * Math.abs(qte) * (1 + tva/100), tva,
+    };
+  }
+
+  // Aggregate by famille
+  const familles = {};
+  for (const [code, agg] of Object.entries(posteAgg)) {
+    const fam = agg.poste.famille;
+    if (!familles[fam]) familles[fam] = { pr: 0, pv_ht: 0, pv_ttc: 0 };
+    familles[fam].pr += agg.pr_total;
+    familles[fam].pv_ht += agg.pv_total_ht;
+    familles[fam].pv_ttc += agg.pv_total_ttc;
+  }
+
+  const totalPR = Object.values(familles).reduce((s,f) => s + f.pr, 0);
+  const totalPV_HT = Object.values(familles).reduce((s,f) => s + f.pv_ht, 0);
+  const totalPV_TTC = Object.values(familles).reduce((s,f) => s + f.pv_ttc, 0);
+  const margeEUR = totalPV_HT - totalPR * (1 + state.params.fg_chantier/100 + state.params.fg_entreprise/100);
+  const margePct = totalPV_HT > 0 ? ((totalPV_HT - totalPR * (1 + state.params.fg_chantier/100 + state.params.fg_entreprise/100)) / totalPV_HT * 100) : 0;
+
+  el.innerHTML = `
+    <div class="synth-grid">
+      <div class="synth-card"><div class="label">Prix de revient total</div><div class="value pr">${fmt(totalPR)} EUR</div></div>
+      <div class="synth-card"><div class="label">Prix de vente HT</div><div class="value pv">${fmt(totalPV_HT)} EUR</div></div>
+      <div class="synth-card"><div class="label">Prix de vente TTC</div><div class="value pv">${fmt(totalPV_TTC)} EUR</div></div>
+      <div class="synth-card"><div class="label">Marge</div><div class="value marge">${fmt(margeEUR)} EUR (${margePct.toFixed(1)}%)</div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Synthèse par famille</div>
+      <table class="data-table">
+        <thead><tr><th>Famille</th><th>PR total</th><th>PV total HT</th><th>Marge EUR</th><th>Marge %</th></tr></thead>
+        <tbody>
+        ${Object.entries(familles).map(([fam, v]) => {
+          const m = v.pv_ht - v.pr * (1 + state.params.fg_chantier/100 + state.params.fg_entreprise/100);
+          const mp = v.pv_ht > 0 ? (m / v.pv_ht * 100) : 0;
+          return `<tr>
+            <td><strong>${fam}</strong></td>
+            <td class="computed">${fmt(v.pr)}</td>
+            <td class="computed">${fmt(v.pv_ht)}</td>
+            <td class="computed">${fmt(m)}</td>
+            <td class="computed">${mp.toFixed(1)}%</td>
+          </tr>`;
+        }).join('')}
+        <tr style="font-weight:700;border-top:2px solid var(--primary)">
+          <td>TOTAL</td>
+          <td class="computed">${fmt(totalPR)}</td>
+          <td class="computed">${fmt(totalPV_HT)}</td>
+          <td class="computed">${fmt(margeEUR)}</td>
+          <td class="computed">${margePct.toFixed(1)}%</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Détail par poste</div>
+      <table class="data-table">
+        <thead><tr><th>Code</th><th>Désignation</th><th>Unité</th><th>Qté</th><th>PV unit. HT</th><th>PV total HT</th><th>TVA</th><th>PV total TTC</th></tr></thead>
+        <tbody>
+        ${Object.values(posteAgg).map(a => `<tr>
+          <td>${esc(a.poste.code)}</td>
+          <td>${esc(a.poste.designation)}</td>
+          <td>${esc(a.poste.unite)}</td>
+          <td class="mono">${a.qte.toFixed(2)}</td>
+          <td class="computed">${fmt(a.pv_unit)}</td>
+          <td class="computed">${fmt(a.pv_total_ht)}</td>
+          <td class="mono">${a.tva}%</td>
+          <td class="computed" style="font-weight:600">${fmt(a.pv_total_ttc)}</td>
+        </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Aperçu devis imprimable</div>
+      <div class="form-grid" style="margin-bottom:16px">
+        <div class="form-group"><label>N° devis</label><input value="${esc(state.devis.numero)}" onchange="state.devis.numero=this.value;render()"></div>
+        <div class="form-group"><label>Date</label><input type="date" value="${state.devis.date}" onchange="state.devis.date=this.value;render()"></div>
+        <div class="form-group"><label>Client</label><input value="${esc(state.devis.client_nom)}" onchange="state.devis.client_nom=this.value;render()" placeholder="Nom du client"></div>
+        <div class="form-group"><label>Adresse client</label><input value="${esc(state.devis.client_adresse)}" onchange="state.devis.client_adresse=this.value;render()"></div>
+        <div class="form-group"><label>Chantier</label><input value="${esc(state.devis.chantier)}" onchange="state.devis.chantier=this.value;render()"></div>
+        <div class="form-group"><label>Référence</label><input value="${esc(state.devis.reference)}" onchange="state.devis.reference=this.value;render()"></div>
+      </div>
+      <div class="devis-preview" id="devis-content">
+        <div class="devis-header">
+          <div class="left">
+            <h2>${esc(state.params.entreprise_nom)}</h2>
+            <div style="font-size:12px;color:#666;margin-top:4px">${esc(state.params.entreprise_adresse)}<br>TVA : ${esc(state.params.entreprise_tva)}<br>${esc(state.params.entreprise_contact)}</div>
+          </div>
+          <div class="right">
+            <div style="font-size:16px;font-weight:700;color:#1a365d">DEVIS N° ${esc(state.devis.numero)}</div>
+            <div style="margin-top:4px">Date : ${state.devis.date}</div>
+          </div>
+        </div>
+        <div class="devis-client">
+          <div><strong>Client :</strong> ${esc(state.devis.client_nom) || '—'}<br>${esc(state.devis.client_adresse) || ''}</div>
+          <div><strong>Chantier :</strong> ${esc(state.devis.chantier) || '—'}<br>Réf. : ${esc(state.devis.reference) || '—'}</div>
+        </div>
+        <table>
+          <thead><tr><th>#</th><th>Poste</th><th>Désignation</th><th>Unité</th><th>Quantité</th><th>PU HT</th><th>Total HT</th></tr></thead>
+          <tbody>
+          ${Object.values(posteAgg).filter(a=>a.qte!==0).map((a, i) => `<tr>
+            <td>${i+1}</td>
+            <td>${esc(a.poste.code)}</td>
+            <td>${esc(a.poste.designation)}</td>
+            <td>${esc(a.poste.unite)}</td>
+            <td style="text-align:right">${a.qte.toFixed(2)}</td>
+            <td style="text-align:right">${fmt(a.pv_unit)}</td>
+            <td style="text-align:right;font-weight:600">${fmt(a.pv_total_ht)}</td>
+          </tr>`).join('')}
+          </tbody>
+        </table>
+        <div class="devis-totaux">
+          <div class="line"><span>Sous-total HT :</span><span>${fmt(totalPV_HT)} EUR</span></div>
+          <div class="line"><span>TVA (${state.params.tva_mode === 'renovation' ? '6' : '21'}%) :</span><span>${fmt(totalPV_TTC - totalPV_HT)} EUR</span></div>
+          <div class="line total"><span>TOTAL TTC :</span><span>${fmt(totalPV_TTC)} EUR</span></div>
+        </div>
+        <div style="margin-top:24px;font-size:11px;color:#666">${esc(state.devis.conditions)}</div>
+      </div>
+    </div>
+  `;
+}
+
+// ============================================================
+// EXPORT FUNCTIONS
+// ============================================================
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `chiffrage-${state.devis.numero || 'backup'}.json`;
+  a.click();
+}
+
+function importJSON(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      state = JSON.parse(reader.result);
+      saveState();
+      render();
+    } catch(err) { alert('Fichier JSON invalide'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function exportExcel() {
+  if (typeof XLSX === 'undefined') { alert('SheetJS non chargé'); return; }
+  const wb = XLSX.utils.book_new();
+
+  // Paramètres
+  const paramData = Object.entries(state.params).map(([k,v]) => ({Paramètre: k, Valeur: v}));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(paramData), 'Paramètres');
+
+  // MO
+  const moData = state.mainOeuvre.map(m => ({...m, cout_employeur_h: coutEmployeurH(m), taux_h_PR: tauxHPR(m)}));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(moData), 'Main-oeuvre');
+
+  // Matériaux
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(state.materiaux), 'Matériaux');
+
+  // Consommables
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(state.consommables), 'Consommables');
+
+  // Engins
+  const engData = state.engins.map(e => ({...e, cout_h_total: enginCoutHTotal(e)}));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(engData), 'Engins');
+
+  // Postes
+  const postesData = state.postes.map(p => ({
+    Code: p.code, Famille: p.famille, Désignation: p.designation, Unité: p.unite,
+    PR_MO: prMOUnitaire(p), PR_MAT: prMATUnitaire(p), PR_CONS: prCONSUnitaire(p),
+    PR_ENG: prENGUnitaire(p), PR_ST: prSTUnitaire(p), PR_Direct: prDirectUnitaire(p),
+    Cout_complet: coutCompletUnitaire(p), PV_HT: pvUnitaireHT(p),
+  }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(postesData), 'Postes');
+
+  // Métrés
+  const metresData = state.metres.map((m,i) => {
+    const p = state.postes.find(x=>x.code===m.code_poste);
+    const qte = calcQte(m);
+    return {
+      '#': i+1, Poste: m.code_poste, Localisation: m.localisation,
+      L: m.L_m, l: m.l_m, h: m.h_m, Ép: m.epaisseur_m, Nb: m.nb, Coef: m.coef,
+      Signe: m.signe, Qté_calc: qte,
+      PR_unit: p ? prDirectUnitaire(p) : 0,
+      PV_unit_HT: p ? pvUnitaireHT(p) : 0,
+      PV_total_HT: p ? pvUnitaireHT(p) * Math.abs(qte) : 0,
+    };
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(metresData), 'Métrés');
+
+  // Synthèse
+  const familles = {};
+  for (const p of state.postes) {
+    const qte = qteTotalePoste(p.code);
+    const fam = p.famille;
+    if (!familles[fam]) familles[fam] = {pr:0, pv_ht:0};
+    familles[fam].pr += prDirectUnitaire(p) * Math.abs(qte);
+    familles[fam].pv_ht += pvUnitaireHT(p) * Math.abs(qte);
+  }
+  const synthData = Object.entries(familles).map(([f,v]) => ({
+    Famille: f, PR_total: v.pr, PV_total_HT: v.pv_ht,
+    Marge_EUR: v.pv_ht - v.pr * (1 + state.params.fg_chantier/100 + state.params.fg_entreprise/100),
+  }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(synthData), 'Synthèse');
+
+  XLSX.writeFile(wb, `chiffrage-${state.devis.numero || 'export'}.xlsx`);
+}
+
+function exportPDF() {
+  const element = document.getElementById('devis-content');
+  if (!element) { alert('Allez dans Synthèse & Devis pour voir le devis'); return; }
+  const opt = {
+    margin: 10,
+    filename: `devis-${state.devis.numero || 'export'}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+  html2pdf().set(opt).from(element).save();
+}
+
+// ============================================================
+// GROQ CHAT
+// ============================================================
+function toggleChat() {
+  document.getElementById('chat-panel').classList.toggle('open');
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+
+  const messages = document.getElementById('chat-messages');
+  messages.innerHTML += `<div class="chat-msg user">${esc(msg)}</div>`;
+  messages.scrollTop = messages.scrollHeight;
+
+  if (!state.params.groq_key) {
+    messages.innerHTML += `<div class="chat-msg assistant">Configurez votre clé API Groq dans Paramètres pour utiliser l'assistant.</div>`;
+    messages.scrollTop = messages.scrollHeight;
+    return;
+  }
+
+  const systemPrompt = `Tu es un assistant expert en chiffrage bâtiment en Belgique. Tu connais les barèmes CP124, les taux ONSS, la TVA 6%/21%, les prix courants des matériaux de construction.
+Contexte actuel :
+- Charges patronales : ${state.params.charges_patronales}%
+- FG chantier : ${state.params.fg_chantier}%, FG entreprise : ${state.params.fg_entreprise}%
+- Marge : ${state.params.marge_pct}% (mode: ${state.params.mode_marge})
+- TVA : ${state.params.tva_mode === 'renovation' ? '6%' : '21%'}
+- ${state.postes.length} postes en bibliothèque, ${state.metres.length} lignes de métré
+Réponds en français, de manière concise et technique. Donne des prix réalistes pour la Belgique.`;
+
+  try {
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.params.groq_key}` },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: msg }],
+        max_tokens: 1024, temperature: 0.3,
+      }),
+    });
+    const data = await resp.json();
+    const reply = data.choices?.[0]?.message?.content || 'Erreur de réponse';
+    messages.innerHTML += `<div class="chat-msg assistant">${esc(reply)}</div>`;
+  } catch(err) {
+    messages.innerHTML += `<div class="chat-msg assistant">Erreur : ${esc(err.message)}</div>`;
+  }
+  messages.scrollTop = messages.scrollHeight;
+}
+
+// ============================================================
+// INIT
+// ============================================================
+loadState();
+render();
+</script>
+</body>
+</html>
